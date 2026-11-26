@@ -27,9 +27,11 @@ import {
   DEFAULT_PORTFOLIO_SORT,
   filterPortfolioRows,
   getDefaultPortfolioSortDir,
+  getPortfolioPnlMeta,
   normalizePortfolioSort,
   PORTFOLIO_SORT_OPTIONS,
   sortPortfolioRows,
+  summarizePortfolioRows,
   togglePortfolioSort,
 } from "./portfolio.js";
 
@@ -3549,11 +3551,6 @@ function renderPortfolioPage({ skipQuoteFetch = false } = {}) {
     ensurePortfolioCoinQuotes({ forceRefresh: false });
   }
 
-  let totalValue = 0;
-  let totalCost = 0;
-  let hasCostBasis = false;
-  let weighted24hChange = 0;
-
   const rows = trackedCodes.map((code) => {
     const coin = findKnownCoin(code, coinByCode) || {
       code,
@@ -3570,33 +3567,28 @@ function renderPortfolioPage({ skipQuoteFetch = false } = {}) {
     const holding = state.portfolio.holdings[code] || null;
     const qty = holding?.quantity || 0;
     const value = hasPrice ? qty * coin.rate : null;
-    const cost =
-      holding?.avgCost !== null && holding?.avgCost !== undefined
-        ? qty * holding.avgCost
-        : null;
+    const hasValidAvgCost =
+      typeof holding?.avgCost === "number" &&
+      Number.isFinite(holding.avgCost) &&
+      holding.avgCost >= 0;
+    const cost = qty > 0 && hasValidAvgCost ? qty * holding.avgCost : null;
     const pnl = hasPrice && cost !== null ? value - cost : null;
-    const pnlPct = hasPrice && cost && cost > 0 ? (pnl / cost) * 100 : null;
-
-    if (hasPrice && value !== null) {
-      totalValue += value;
-    }
-    if (hasPrice && cost !== null && qty > 0) {
-      totalCost += cost;
-      hasCostBasis = true;
-    }
-    if (hasPrice && value > 0 && typeof coin.changes?.h24 === "number") {
-      weighted24hChange += value * (coin.changes.h24 / 100);
-    }
+    const pnlPct = hasPrice && cost !== null && cost > 0 ? (pnl / cost) * 100 : null;
 
     return { coin, holding, qty, value, cost, pnl, pnlPct, hasPrice, isLoadingPrice };
   });
 
-  const totalPnl = hasCostBasis ? totalValue - totalCost : null;
-  const totalPnlPct = hasCostBasis && totalCost > 0 ? (totalPnl / totalCost) * 100 : null;
-  const dayPct = totalValue > 0 ? (weighted24hChange / totalValue) * 100 : null;
-
-  const holdingsCount = rows.filter((r) => r.qty > 0).length;
-  const watchlistOnlyCount = rows.length - holdingsCount;
+  const summary = summarizePortfolioRows(rows);
+  const {
+    totalValue,
+    totalPnl,
+    totalPnlPct,
+    dayPct,
+    holdingsCount,
+    watchlistOnlyCount,
+    holdingsWithCostBasisCount,
+  } = summary;
+  const pnlMeta = getPortfolioPnlMeta(summary);
 
   const sort = normalizePortfolioSort(
     state.preferences.portfolioSortKey,
@@ -3644,14 +3636,17 @@ function renderPortfolioPage({ skipQuoteFetch = false } = {}) {
         </div>
       </div>
       <div class="ck-card">
-        <div class="ck-kpi-label">Total Profit / Loss</div>
+        <div class="ck-kpi-label">${esc(pnlMeta.label)}</div>
         <div class="ck-kpi-val" style="margin-top:4px;font-size:20px">
           ${
             totalPnl !== null
               ? `<span class="${totalPnl >= 0 ? "ck-up" : "ck-down"}">${totalPnl > 0 ? "+" : ""}${esc(formatCompactCurrency(totalPnl, cur))}</span> ${totalPnlPct !== null ? formatDeltaHtml(totalPnlPct) : ""}`
-              : `<span class="ck-muted">Set avg cost</span>`
+              : holdingsWithCostBasisCount > 0
+                ? `<span class="ck-muted">—</span>`
+                : `<span class="ck-muted">Set avg cost</span>`
           }
         </div>
+        ${pnlMeta.subtext ? `<div class="ck-kpi-sub">${esc(pnlMeta.subtext)}</div>` : ""}
       </div>
       <div class="ck-card">
         <div class="ck-kpi-label">Watched Coins</div>

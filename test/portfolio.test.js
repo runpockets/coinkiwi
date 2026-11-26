@@ -7,8 +7,10 @@ import { createStore } from "../lib/store.js";
 import {
   DEFAULT_PORTFOLIO_SORT,
   filterPortfolioRows,
+  getPortfolioPnlMeta,
   normalizePortfolioSort,
   sortPortfolioRows,
+  summarizePortfolioRows,
   togglePortfolioSort,
 } from "../public/portfolio.js";
 
@@ -260,4 +262,253 @@ test("sortPortfolioRows keeps unpriced holdings after priced ones in both direct
   assert.deepEqual(codes(sortPortfolioRows(rows, "price", "desc")), ["ETH", "SOL", "STETH"]);
   assert.deepEqual(codes(sortPortfolioRows(rows, "price", "asc")), ["SOL", "ETH", "STETH"]);
   assert.deepEqual(codes(sortPortfolioRows(rows, "pnl", "asc")), ["SOL", "ETH", "STETH"]);
+});
+
+test("summarizePortfolioRows excludes uncosted holdings from profit and flags partial coverage", () => {
+  // Reported regression: $100 holding at $100 cost (break-even) + $100 holding with no cost
+  const rows = [
+    {
+      coin: { code: "BTC", name: "Bitcoin", rate: 100, changes: { h24: 2 } },
+      qty: 1,
+      value: 100,
+      cost: 100,
+      hasPrice: true,
+    },
+    {
+      coin: { code: "ETH", name: "Ethereum", rate: 100, changes: { h24: -2 } },
+      qty: 1,
+      value: 100,
+      cost: null,
+      hasPrice: true,
+    },
+  ];
+
+  const summary = summarizePortfolioRows(rows);
+  assert.equal(summary.totalValue, 200);
+  assert.equal(summary.costBasisValue, 100);
+  assert.equal(summary.totalCost, 100);
+  assert.equal(summary.hasCostBasis, true);
+  assert.equal(summary.totalPnl, 0);
+  assert.equal(summary.totalPnlPct, 0);
+  assert.equal(summary.dayPct, 0);
+  assert.equal(summary.holdingsCount, 2);
+  assert.equal(summary.costBasisCount, 1);
+  assert.equal(summary.missingCostBasisCount, 1);
+  assert.equal(summary.excludedFromPnlCount, 1);
+  assert.equal(summary.isPartialPnl, true);
+
+  assert.deepEqual(getPortfolioPnlMeta(summary), {
+    label: "Profit / Loss (Partial)",
+    subtext: "Based on 1 of 2 holdings with cost basis",
+  });
+});
+
+test("summarizePortfolioRows computes partial profit on mixed fixture rows without inflating P&L", () => {
+  // FIXTURE_ROWS has 3 holdings with cost basis (ETH +2k, SOL +1.5k, BTC -5k => -1.5k on 44.5k cost),
+  // 1 holding without cost basis (ADA worth $500), and 2 watch-only coins (DOGE, XRP).
+  const summary = summarizePortfolioRows(FIXTURE_ROWS);
+  assert.equal(summary.totalValue, 43_500);
+  assert.equal(summary.costBasisValue, 43_000);
+  assert.equal(summary.totalCost, 44_500);
+  assert.equal(summary.totalPnl, -1_500);
+  assert.ok(Math.abs(summary.totalPnlPct - (-1_500 / 44_500) * 100) < 1e-9);
+  assert.equal(summary.holdingsCount, 4);
+  assert.equal(summary.watchlistOnlyCount, 2);
+  assert.equal(summary.costBasisCount, 3);
+  assert.equal(summary.missingCostBasisCount, 1);
+  assert.equal(summary.isPartialPnl, true);
+
+  assert.deepEqual(getPortfolioPnlMeta(summary), {
+    label: "Profit / Loss (Partial)",
+    subtext: "Based on 3 of 4 holdings with cost basis",
+  });
+});
+
+test("summarizePortfolioRows marks full P&L when every holding has price and cost basis (ignoring watch-only)", () => {
+  const rows = [
+    {
+      coin: { code: "ETH", name: "Ethereum", rate: 150, changes: { h24: 10 } },
+      qty: 1,
+      value: 150,
+      cost: 100,
+      hasPrice: true,
+    },
+    {
+      coin: { code: "BTC", name: "Bitcoin", rate: 80, changes: { h24: -5 } },
+      qty: 1,
+      value: 80,
+      cost: 100,
+      hasPrice: true,
+    },
+    {
+      coin: { code: "DOGE", name: "Dogecoin", rate: 0.2, changes: { h24: 50 } },
+      qty: 0,
+      value: 0,
+      cost: null,
+      hasPrice: true,
+    },
+  ];
+
+  const summary = summarizePortfolioRows(rows);
+  assert.equal(summary.totalValue, 230);
+  assert.equal(summary.costBasisValue, 230);
+  assert.equal(summary.totalCost, 200);
+  assert.equal(summary.totalPnl, 30);
+  assert.equal(summary.totalPnlPct, 15);
+  assert.equal(summary.holdingsCount, 2);
+  assert.equal(summary.watchlistOnlyCount, 1);
+  assert.equal(summary.costBasisCount, 2);
+  assert.equal(summary.isPartialPnl, false);
+
+  assert.deepEqual(getPortfolioPnlMeta(summary), {
+    label: "Total Profit / Loss",
+    subtext: null,
+  });
+});
+
+test("summarizePortfolioRows returns null profit when no holdings have a cost basis", () => {
+  const rows = [
+    {
+      coin: { code: "BTC", name: "Bitcoin", rate: 100, changes: { h24: 5 } },
+      qty: 1,
+      value: 100,
+      cost: null,
+      hasPrice: true,
+    },
+    {
+      coin: { code: "ETH", name: "Ethereum", rate: 200, changes: { h24: 5 } },
+      qty: 1,
+      value: 200,
+      cost: null,
+      hasPrice: true,
+    },
+  ];
+
+  const summary = summarizePortfolioRows(rows);
+  assert.equal(summary.totalValue, 300);
+  assert.equal(summary.costBasisValue, 0);
+  assert.equal(summary.totalCost, 0);
+  assert.equal(summary.hasCostBasis, false);
+  assert.equal(summary.totalPnl, null);
+  assert.equal(summary.totalPnlPct, null);
+  assert.equal(summary.holdingsCount, 2);
+  assert.equal(summary.costBasisCount, 0);
+  assert.equal(summary.missingCostBasisCount, 2);
+  assert.equal(summary.isPartialPnl, false);
+
+  assert.deepEqual(getPortfolioPnlMeta(summary), {
+    label: "Total Profit / Loss",
+    subtext: null,
+  });
+
+  const emptySummary = summarizePortfolioRows([]);
+  assert.equal(emptySummary.totalValue, 0);
+  assert.equal(emptySummary.totalPnl, null);
+  assert.equal(emptySummary.totalPnlPct, null);
+  assert.equal(emptySummary.isPartialPnl, false);
+});
+
+test("summarizePortfolioRows excludes unpriced holdings from profit and handles zero cost basis", () => {
+  // Priced holding with cost + unpriced holding with cost
+  const unpricedMixed = summarizePortfolioRows([
+    {
+      coin: { code: "BTC", name: "Bitcoin", rate: 120, changes: { h24: 0 } },
+      qty: 1,
+      value: 120,
+      cost: 100,
+      hasPrice: true,
+    },
+    {
+      coin: { code: "STETH", name: "STETH", rate: null, changes: {} },
+      qty: 2,
+      value: null,
+      cost: 500,
+      hasPrice: false,
+    },
+  ]);
+  assert.equal(unpricedMixed.totalValue, 120);
+  assert.equal(unpricedMixed.costBasisValue, 120);
+  assert.equal(unpricedMixed.totalCost, 100);
+  assert.equal(unpricedMixed.totalPnl, 20);
+  assert.equal(unpricedMixed.totalPnlPct, 20);
+  assert.equal(unpricedMixed.isPartialPnl, true);
+  assert.deepEqual(getPortfolioPnlMeta(unpricedMixed), {
+    label: "Profit / Loss (Partial)",
+    subtext: "Based on 1 of 2 priced holdings",
+  });
+
+  // Both missing cost basis and missing price
+  const bothExcluded = summarizePortfolioRows([
+    {
+      coin: { code: "BTC", name: "Bitcoin", rate: 120, changes: {} },
+      qty: 1,
+      value: 120,
+      cost: 100,
+      hasPrice: true,
+    },
+    {
+      coin: { code: "ETH", name: "Ethereum", rate: 200, changes: {} },
+      qty: 1,
+      value: 200,
+      cost: null,
+      hasPrice: true,
+    },
+    {
+      coin: { code: "STETH", name: "STETH", rate: null, changes: {} },
+      qty: 2,
+      value: null,
+      cost: 500,
+      hasPrice: false,
+    },
+  ]);
+  assert.equal(bothExcluded.totalPnl, 20);
+  assert.equal(bothExcluded.totalPnlPct, 20);
+  assert.equal(bothExcluded.isPartialPnl, true);
+  assert.deepEqual(getPortfolioPnlMeta(bothExcluded), {
+    label: "Profit / Loss (Partial)",
+    subtext: "Based on 1 of 3 holdings with price & cost basis",
+  });
+
+  // Only unpriced holding with cost basis waits for current prices
+  const awaitingPrice = summarizePortfolioRows([
+    {
+      coin: { code: "STETH", name: "STETH", rate: null, changes: {} },
+      qty: 2,
+      value: null,
+      cost: 500,
+      hasPrice: false,
+    },
+  ]);
+  assert.equal(awaitingPrice.hasCostBasis, false);
+  assert.equal(awaitingPrice.totalPnl, null);
+  assert.equal(awaitingPrice.holdingsWithCostBasisCount, 1);
+  assert.deepEqual(getPortfolioPnlMeta(awaitingPrice), {
+    label: "Total Profit / Loss",
+    subtext: "Waiting for current prices",
+  });
+
+  // Recorded $0 cost basis (e.g. airdrop) counts as recorded cost basis with null percentage
+  const zeroCost = summarizePortfolioRows([
+    {
+      coin: { code: "ARB", name: "Arbitrum", rate: 2, changes: {} },
+      qty: 50,
+      value: 100,
+      cost: 0,
+      hasPrice: true,
+    },
+    {
+      coin: { code: "ETH", name: "Ethereum", rate: 100, changes: {} },
+      qty: 1,
+      value: 100,
+      cost: null,
+      hasPrice: true,
+    },
+  ]);
+  assert.equal(zeroCost.totalValue, 200);
+  assert.equal(zeroCost.costBasisValue, 100);
+  assert.equal(zeroCost.totalCost, 0);
+  assert.equal(zeroCost.totalPnl, 100);
+  assert.equal(zeroCost.totalPnlPct, null);
+  assert.equal(zeroCost.costBasisCount, 1);
+  assert.equal(zeroCost.isPartialPnl, true);
 });

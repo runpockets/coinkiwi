@@ -1,4 +1,4 @@
-// Portfolio sorting and filtering engine shared by the CoinKiwi UI and tests.
+// Portfolio summary, sorting, and filtering engine shared by the CoinKiwi UI and tests.
 
 export const PORTFOLIO_SORT_OPTIONS = [
   { key: "value", label: "Value", defaultDir: "desc" },
@@ -157,4 +157,126 @@ export function sortPortfolioRows(rows, sortKey = "value", sortDir = "desc") {
 
     return compareTieBreakers(a, b);
   });
+}
+
+/**
+ * Summarize portfolio totals from prepared portfolio rows.
+ *
+ * Profit/loss and percentage return are calculated strictly from holdings
+ * (`qty > 0`) that have both a valid current price and a recorded cost basis,
+ * so holdings without a cost basis or current price never distort portfolio profit.
+ */
+export function summarizePortfolioRows(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+
+  let totalValue = 0;
+  let costBasisValue = 0;
+  let totalCost = 0;
+  let weighted24hChange = 0;
+  let holdingsCount = 0;
+  let pricedHoldingsCount = 0;
+  let holdingsWithCostBasisCount = 0;
+  let costBasisCount = 0;
+
+  for (const row of list) {
+    const qty = finiteOrNull(row?.qty) ?? 0;
+    const isHolding = qty > 0;
+    const rate = finiteOrNull(row?.coin?.rate);
+    const value = finiteOrNull(row?.value);
+    const hasPrice =
+      (typeof row?.hasPrice === "boolean" ? row.hasPrice : rate !== null && rate > 0) &&
+      value !== null;
+    const cost = finiteOrNull(row?.cost);
+    const hasCost = cost !== null && cost >= 0;
+
+    if (!isHolding) continue;
+
+    holdingsCount += 1;
+
+    if (hasPrice) {
+      pricedHoldingsCount += 1;
+      totalValue += value;
+      const h24 = finiteOrNull(row?.coin?.changes?.h24);
+      if (value > 0 && h24 !== null) {
+        weighted24hChange += value * (h24 / 100);
+      }
+    }
+
+    if (hasCost) {
+      holdingsWithCostBasisCount += 1;
+    }
+
+    if (hasPrice && hasCost) {
+      costBasisValue += value;
+      totalCost += cost;
+      costBasisCount += 1;
+    }
+  }
+
+  const hasCostBasis = costBasisCount > 0;
+  const totalPnl = hasCostBasis ? costBasisValue - totalCost : null;
+  const totalPnlPct = hasCostBasis && totalCost > 0 ? (totalPnl / totalCost) * 100 : null;
+  const dayPct = totalValue > 0 ? (weighted24hChange / totalValue) * 100 : null;
+
+  const watchlistOnlyCount = list.length - holdingsCount;
+  const missingCostBasisCount = holdingsCount - holdingsWithCostBasisCount;
+  const unpricedHoldingsCount = holdingsCount - pricedHoldingsCount;
+  const excludedFromPnlCount = holdingsCount - costBasisCount;
+  const isPartialPnl = hasCostBasis && costBasisCount < holdingsCount;
+
+  return {
+    totalValue,
+    costBasisValue,
+    totalCost,
+    hasCostBasis,
+    totalPnl,
+    totalPnlPct,
+    dayPct,
+    holdingsCount,
+    watchlistOnlyCount,
+    pricedHoldingsCount,
+    unpricedHoldingsCount,
+    holdingsWithCostBasisCount,
+    costBasisCount,
+    missingCostBasisCount,
+    excludedFromPnlCount,
+    isPartialPnl,
+  };
+}
+
+/**
+ * Build user-facing label and coverage subtext for the Portfolio Profit / Loss card.
+ */
+export function getPortfolioPnlMeta(summary) {
+  if (!summary?.hasCostBasis) {
+    return {
+      label: "Total Profit / Loss",
+      subtext:
+        summary?.holdingsWithCostBasisCount > 0 ? "Waiting for current prices" : null,
+    };
+  }
+
+  if (!summary.isPartialPnl) {
+    return {
+      label: "Total Profit / Loss",
+      subtext: null,
+    };
+  }
+
+  const { costBasisCount, holdingsCount, missingCostBasisCount, unpricedHoldingsCount } =
+    summary;
+
+  let subtext;
+  if (missingCostBasisCount > 0 && unpricedHoldingsCount > 0) {
+    subtext = `Based on ${costBasisCount} of ${holdingsCount} holdings with price & cost basis`;
+  } else if (missingCostBasisCount > 0) {
+    subtext = `Based on ${costBasisCount} of ${holdingsCount} holdings with cost basis`;
+  } else {
+    subtext = `Based on ${costBasisCount} of ${holdingsCount} priced holdings`;
+  }
+
+  return {
+    label: "Profit / Loss (Partial)",
+    subtext,
+  };
 }
