@@ -3,10 +3,10 @@ kind: Pocket
 metadata:
   id: coinkiwi
   name: "CoinKiwi"
-  version: "0.1.0"
+  version: "1.0.0"
   description: Self-hosted cryptocurrency price tracker powered by Live Coin Watch.
 runtime:
-  image: localhost/pockets-coinkiwi:0.1.0
+  image: localhost/pockets-coinkiwi:1.0.0
   architectures: [arm64, amd64]
 web:
   port: 8080
