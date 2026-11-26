@@ -1,0 +1,31 @@
+apiVersion: pockets.dev/v1alpha1
+kind: Pocket
+metadata:
+  id: coinkiwi
+  name: "CoinKiwi"
+  version: "0.1.0"
+  description: Self-hosted cryptocurrency price tracker powered by Live Coin Watch.
+runtime:
+  image: localhost/pockets-coinkiwi:0.1.0
+  architectures: [arm64, amd64]
+web:
+  port: 8080
+  healthcheck: /health
+storage:
+  name: data
+  path: /data
+previewApis:
+  - host: api.livecoinwatch.com
+    name: Live Coin Watch
+    purpose: Fetch cryptocurrency prices, global market stats, exchanges, and historical price charts using your Live Coin Watch API key.
+  - host: api.coingecko.com
+    name: CoinGecko Contract Directory
+    purpose: Fetch the daily read-only token contract and blockchain platform directory (once per 24h) so coin pages display verified contract addresses and block explorer links.
+  - host: api.alternative.me
+    name: Alternative.me Fear & Greed
+    purpose: Fetch the daily Crypto Fear & Greed Index for the global market stats bar.
+runtimeVariables:
+  - name: LIVECOINWATCH_API_KEY
+    kind: secret
+    purpose: Live Coin Watch API key for live cryptocurrency prices, charts, and market stats (can also be configured in-app).
+    required: false

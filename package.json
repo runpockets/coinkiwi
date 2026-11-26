@@ -1,0 +1,20 @@
+{
+  "name": "pockets-coinkiwi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted cryptocurrency price tracker powered by Live Coin Watch.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.10.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

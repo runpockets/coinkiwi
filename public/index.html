@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cryptocurrency Prices, Charts, and Crypto Market Cap | CoinKiwi</title>
+    <link rel="icon" href="/favicon.ico?v=6" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=6" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png?v=6" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=6" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app" class="ck-app">
+      <!-- Header Stack (reorders Navbar above Global Stats on mobile) -->
+      <div class="ck-header-stack">
+        <!-- Top Global Market Stats Bar -->
+        <div class="ck-topbar-wrap">
+          <div class="ck-container ck-topbar">
+            <div id="global-stats-wrap" class="ck-stats-wrap">
+              <div id="global-stats" class="ck-stats-scroll" aria-label="Global cryptocurrency market statistics">
+                <span class="ck-stat-item"><span class="ck-muted">Coins:</span> <strong id="stat-coins">—</strong></span>
+                <a href="/exchanges" class="ck-stat-item" data-link><span class="ck-muted">Exchanges:</span> <strong id="stat-exchanges">—</strong></a>
+                <span class="ck-stat-item">
+                  <span class="ck-muted">Market Cap:</span>
+                  <strong id="stat-mcap">—</strong>
+                  <span id="stat-mcap-delta" class="ck-delta"></span>
+                </span>
+                <span class="ck-stat-item"><span class="ck-muted">24h Vol:</span> <strong id="stat-vol">—</strong></span>
+                <span class="ck-stat-item"><span class="ck-muted">Dominance:</span> <strong id="stat-dom">—</strong></span>
+                <span class="ck-stat-item" id="stat-fng-wrap">
+                  <span class="ck-muted">Fear &amp; Greed:</span>
+                  <strong id="stat-fng">—</strong>
+                </span>
+              </div>
+            </div>
+            <div class="ck-topbar-actions">
+              <button
+                type="button"
+                id="btn-api-status"
+                class="ck-top-pill"
+                title="Configure Live Coin Watch API key"
+              >
+                <span class="ck-status-dot" id="api-status-dot"></span>
+                <span id="api-status-label">API Key</span>
+              </button>
+              <div class="ck-popover-anchor">
+                <button
+                  type="button"
+                  id="btn-settings"
+                  class="ck-icon-btn"
+                  aria-label="Settings (Currency, Theme, API Key)"
+                  title="Currency, Theme &amp; API Key"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+                    <circle cx="10" cy="10" r="2.6" />
+                    <path d="M8.4 2.8h3.2l.5 2a5.8 5.8 0 0 1 1.5.9l1.9-.6 1.6 2.8-1.4 1.3c.1.5.1 1.1 0 1.6l1.4 1.3-1.6 2.8-1.9-.6a5.8 5.8 0 0 1-1.5.9l-.5 2H8.4l-.5-2a5.8 5.8 0 0 1-1.5-.9l-1.9.6-1.6-2.8 1.4-1.3a5.8 5.8 0 0 1 0-1.6L2.9 7.9l1.6-2.8 1.9.6a5.8 5.8 0 0 1 1.5-.9l.5-2Z" />
+                  </svg>
+                </button>
+                <div id="settings-popover" class="ck-popover ck-hidden" role="dialog" aria-label="Settings"></div>
+              </div>
+              <button
+                type="button"
+                id="btn-theme-quick"
+                class="ck-icon-btn"
+                aria-label="Toggle dark mode"
+                title="Toggle Light / Dark mode"
+              >
+                <svg id="theme-icon-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <circle cx="10" cy="10" r="3.4" />
+                  <path d="M10 2.2v1.6M10 16.2v1.6M2.2 10h1.6M16.2 10h1.6M4.5 4.5l1.1 1.1M14.4 14.4l1.1 1.1M15.5 4.5l-1.1 1.1M5.6 14.4l-1.1 1.1" stroke-linecap="round"/>
+                </svg>
+                <svg id="theme-icon-moon" class="ck-hidden" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M16.2 12.4A6.5 6.5 0 0 1 7.6 3.8a6.7 6.7 0 1 0 8.6 8.6Z" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                id="btn-refresh"
+                class="ck-icon-btn ck-refresh-btn"
+                aria-label="Refresh market data"
+                title="Refresh market data"
+              >
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <path d="M16.2 10a6.2 6.2 0 1 1-1.6-4.2" stroke-linecap="round"/>
+                  <path d="M16.4 3.4v2.8h-2.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span id="refresh-countdown" class="ck-refresh-countdown ck-hidden"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Navigation Bar -->
+        <header class="ck-navbar-wrap">
+          <div class="ck-container ck-navbar">
+            <div class="ck-nav-left">
+              <a href="/" class="ck-brand" data-link data-reset-markets>
+                <span class="ck-brand-icon" aria-hidden="true">
+                  <img src="/favicon.svg?v=6" alt="" width="42" height="42" />
+                </span>
+                <span class="ck-brand-text">coinkiwi</span>
+              </a>
+              <nav class="ck-nav-links" aria-label="Primary">
+                <a href="/" class="ck-nav-link" data-nav="markets" data-link data-reset-markets>Cryptocurrencies</a>
+                <a href="/exchanges" class="ck-nav-link" data-nav="exchanges" data-link>Exchanges</a>
+                <a href="/categories" class="ck-nav-link" data-nav="categories" data-link>Categories</a>
+              </nav>
+            </div>
+
+            <div class="ck-nav-right">
+              <a href="/portfolio" class="ck-portfolio-link" data-nav="portfolio" data-link>
+                <span class="ck-star-gold" aria-hidden="true">★</span>
+                <span>Portfolio</span>
+                <span id="nav-portfolio-count" class="ck-count-badge ck-hidden">0</span>
+              </a>
+              <div class="ck-search-wrap" id="search-wrap">
+                <svg class="ck-search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="9" cy="9" r="5.5" />
+                  <path d="m13.2 13.2 3.3 3.3" stroke-linecap="round" />
+                </svg>
+                <input
+                  type="search"
+                  id="global-search"
+                  class="ck-search-input"
+                  placeholder="Search"
+                  autocomplete="off"
+                  aria-label="Search coins"
+                />
+                <kbd class="ck-search-kbd">/</kbd>
+                <div id="search-dropdown" class="ck-search-dropdown ck-hidden" role="listbox"></div>
+              </div>
+              <!-- Mobile-only compact header actions (hidden on desktop) -->
+              <div class="ck-mobile-nav-actions">
+                <button
+                  type="button"
+                  id="btn-mobile-refresh"
+                  class="ck-icon-btn ck-refresh-btn"
+                  aria-label="Refresh market data"
+                  title="Refresh market data"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path d="M16.2 10a6.2 6.2 0 1 1-1.6-4.2" stroke-linecap="round"/>
+                    <path d="M16.4 3.4v2.8h-2.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span id="mobile-refresh-badge" class="ck-refresh-countdown ck-hidden"></span>
+                </button>
+                <button
+                  type="button"
+                  id="btn-mobile-api"
+                  class="ck-mobile-cta-btn"
+                  title="API Key &amp; Data Controls"
+                >
+                  <span class="ck-status-dot" id="mobile-api-dot"></span>
+                  <span id="mobile-api-label">Live</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+      </div>
+
+      <!-- Data Status Banner (visible when sample/stale/needs API key) -->
+      <div id="data-banner" class="ck-banner ck-hidden" role="status"></div>
+
+      <!-- Full-Page Diagonal Watermark Overlay (visible when showing sample data) -->
+      <div id="sample-watermark-overlay" class="ck-sample-watermark ck-hidden" aria-hidden="true">
+        <svg class="ck-sample-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+          <defs>
+            <pattern
+              id="ck-sample-watermark-pattern"
+              width="540"
+              height="230"
+              patternUnits="userSpaceOnUse"
+              patternTransform="rotate(-22)"
+            >
+              <text class="ck-sample-watermark-text" x="185" y="68" text-anchor="middle">SAMPLE DATA. ADD API KEY</text>
+              <text class="ck-sample-watermark-text" x="355" y="183" text-anchor="middle">SAMPLE DATA. ADD API KEY</text>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#ck-sample-watermark-pattern)" />
+        </svg>
+      </div>
+
+      <!-- Sticky Coin Header Bar (Coin Detail Scroll State) -->
+      <div id="sticky-coin-bar" class="ck-sticky-coin-bar ck-hidden"></div>
+
+      <!-- Main Route View -->
+      <main id="main-content" class="ck-main ck-container"></main>
+
+      <!-- Footer -->
+      <footer class="ck-footer">
+        <div class="ck-container ck-footer-inner">
+          <div class="ck-footer-brand">
+            <img src="/favicon.svg?v=5" alt="" width="28" height="28" />
+            <strong>coinkiwi</strong>
+            <span class="ck-muted">Self-hosted crypto tracker · Powered by Live Coin Watch</span>
+          </div>
+          <div class="ck-footer-meta">
+            <span id="footer-updated" class="ck-muted"></span>
+            <button type="button" class="ck-link-btn" id="footer-api-btn">Live Coin Watch API Key</button>
+          </div>
+        </div>
+      </footer>
+      <!-- Floating Scroll-to-Top Button (mobile) -->
+      <button
+        type="button"
+        id="btn-scroll-top"
+        class="ck-scroll-top-btn ck-hidden"
+        aria-label="Scroll to top"
+        title="Back to top"
+      >↑</button>
+
+      <!-- Mobile Fixed Bottom Navigation Bar (hidden on desktop) -->
+      <nav class="ck-bottom-nav" aria-label="Mobile navigation">
+        <a href="/" class="ck-bottom-tab" data-nav="markets" data-link data-reset-markets>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 10.5 12 3l9 7.5" />
+            <path d="M5 9.5V20a1 1 0 0 0 1 1h4.5v-6h3v6H18a1 1 0 0 0 1-1V9.5" />
+          </svg>
+          <span>Home</span>
+        </a>
+        <a href="/portfolio" class="ck-bottom-tab" data-nav="portfolio" data-link>
+          <span class="ck-bottom-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 3 14.9 8.9 21.4 9.8 16.7 14.4 17.8 20.8 12 17.7 6.2 20.8 7.3 14.4 2.6 9.8 9.1 8.9 12 3" />
+            </svg>
+            <span id="mobile-portfolio-count" class="ck-bottom-badge ck-hidden">0</span>
+          </span>
+          <span>Portfolio</span>
+        </a>
+        <button type="button" id="btn-mobile-search" class="ck-bottom-tab" aria-label="Search coins">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m16 16 4.5 4.5" />
+          </svg>
+          <span>Search</span>
+        </button>
+        <a href="/exchanges" class="ck-bottom-tab" data-nav="exchanges" data-link>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 20h18" />
+            <path d="M5 20V10l7-5 7 5v10" />
+            <path d="M9 20v-5h6v5" />
+          </svg>
+          <span>Exchanges</span>
+        </a>
+        <button type="button" id="btn-mobile-menu" class="ck-bottom-tab" aria-label="Open menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+          <span>Menu</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Mobile Full-Screen Search Sheet -->
+    <div id="mobile-search-sheet" class="ck-mobile-sheet ck-hidden" role="dialog" aria-modal="true" aria-label="Search coins">
+      <div class="ck-mobile-sheet-header">
+        <div class="ck-mobile-search-input-wrap">
+          <svg class="ck-search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="9" cy="9" r="5.5" />
+            <path d="m13.2 13.2 3.3 3.3" stroke-linecap="round" />
+          </svg>
+          <input
+            type="search"
+            id="mobile-search-input"
+            class="ck-mobile-search-input"
+            placeholder="Search coins, tickers..."
+            autocomplete="off"
+            aria-label="Search coins"
+          />
+        </div>
+        <button type="button" id="btn-close-mobile-search" class="ck-mobile-sheet-close">Cancel</button>
+      </div>
+      <div id="mobile-search-results" class="ck-mobile-search-results"></div>
+    </div>
+
+    <!-- Mobile Menu Sheet -->
+    <div id="mobile-menu-backdrop" class="ck-mobile-drawer-backdrop ck-hidden" role="dialog" aria-modal="true" aria-label="Menu">
+      <div id="mobile-menu-drawer" class="ck-mobile-drawer"></div>
+    </div>
+
+    <!-- Modal Root (API Key Setup & Holding Editor) -->
+    <div id="modal-root" class="ck-modal-backdrop ck-hidden" role="dialog" aria-modal="true"></div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
