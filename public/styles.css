@@ -1,6 +1,7 @@
 /* CoinKiwi — Visual design system */
 
 :root {
+  color-scheme: light;
   --ck-bg: #ffffff;
   --ck-surface: #ffffff;
   --ck-surface-muted: #f1f5f9;
@@ -35,6 +36,7 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --ck-bg: #0b1120;
   --ck-surface: #111827;
   --ck-surface-muted: #1e293b;
@@ -114,10 +116,22 @@ select {
   color: var(--ck-gold);
 }
 
+.ck-status-bar-fill {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--ck-surface);
+  z-index: 46;
+  pointer-events: none;
+}
+
 .ck-container {
   max-width: 1380px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
 }
 
 /* ==================== Top Global Market Stats Bar ==================== */
@@ -125,6 +139,7 @@ select {
 .ck-topbar-wrap {
   border-bottom: 1px solid var(--ck-divider);
   background: var(--ck-surface);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .ck-topbar {
@@ -618,7 +633,7 @@ select {
 
 .ck-banner.is-sample {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 44;
   border-bottom: 2px solid var(--ck-warn);
   box-shadow: 0 4px 14px rgba(217, 119, 6, 0.14);
@@ -1842,10 +1857,11 @@ select {
   top: 0;
   left: 0;
   right: 0;
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--ck-surface);
   border-bottom: 1px solid var(--ck-border);
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
-  z-index: 45;
+  z-index: 48;
 }
 
 .ck-sticky-coin-inner {
@@ -3014,8 +3030,18 @@ select {
 }
 
 @media (max-width: 768px) {
+  html {
+    background: var(--ck-surface);
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--ck-bg);
+  }
+
   .ck-container {
-    padding: 0 14px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
   }
 
   .ck-sample-watermark-text {
@@ -3023,14 +3049,22 @@ select {
     letter-spacing: 0.09em;
   }
 
-  /* Mobile Header Stack: Logo+CTA on top, Global Stats Ticker underneath */
+  /* Mobile Header Stack: Fixed solid Navbar covering top safe-area, Global Stats Ticker underneath */
   .ck-header-stack {
     display: flex;
     flex-direction: column;
+    padding-top: calc(55px + env(safe-area-inset-top, 0px));
   }
 
   .ck-navbar-wrap {
     order: 1;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 48;
+    background: var(--ck-surface);
+    padding-top: env(safe-area-inset-top, 0px);
     border-bottom: 1px solid var(--ck-divider);
   }
 
@@ -3068,6 +3102,15 @@ select {
   .ck-topbar-wrap {
     order: 2;
     position: relative;
+    padding-top: 0;
+  }
+
+  .ck-banner.is-sample {
+    top: calc(55px + env(safe-area-inset-top, 0px));
+  }
+
+  .ck-sticky-coin-bar {
+    z-index: 49;
   }
 
   .ck-topbar {
@@ -3555,7 +3598,8 @@ select {
 
   /* Modals fit cleanly inside mobile viewport */
   .ck-modal-backdrop {
-    padding: 12px;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     align-items: flex-end;
   }
 
@@ -3567,14 +3611,46 @@ select {
 
   /* Footer clears fixed bottom navigation bar */
   .ck-footer {
-    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+    padding-top: 18px;
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
   }
 
   .ck-footer-inner {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    text-align: center;
     gap: 10px;
-    padding-right: 48px;
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  .ck-footer-brand {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px 8px;
+  }
+
+  .ck-footer-brand strong {
+    font-size: 14px;
+  }
+
+  .ck-footer-brand .ck-muted {
+    flex-basis: 100%;
+    line-height: 1.4;
+    text-wrap: balance;
+  }
+
+  .ck-footer-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ck-footer .ck-link-btn {
+    text-align: center;
   }
 
   /* Floating Scroll-to-Top Button */
@@ -3609,7 +3685,8 @@ select {
     z-index: 55;
     background: var(--ck-surface);
     border-top: 1px solid var(--ck-border);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    padding: 6px max(4px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom))
+      max(4px, env(safe-area-inset-left));
     box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.05);
   }
 
@@ -3675,7 +3752,8 @@ select {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 14px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right))
+      12px max(14px, env(safe-area-inset-left));
     border-bottom: 1px solid var(--ck-border);
     background: var(--ck-surface);
   }
@@ -3813,5 +3891,16 @@ select {
     background: var(--ck-brand-soft);
     border-color: var(--ck-brand);
     color: var(--ck-brand-hover);
+  }
+}
+
+@media (display-mode: standalone) and (min-width: 769px) {
+  html {
+    background: var(--ck-surface);
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--ck-bg);
   }
 }

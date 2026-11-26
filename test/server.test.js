@@ -1022,3 +1022,37 @@ test("GET /api/quotes resolves off-list portfolio coins via /coins/map + /coins/
   assert.equal(bootAfter.extraCoins.RETH.rate, 2780.5);
   assert.equal(bootAfter.extraCoins.BTC, undefined);
 });
+
+test("PWA manifest and SPA HTML sync status-bar theme-color with saved theme preference", async (t) => {
+  const dataDir = await makeDataDir(t);
+  const { base } = await startPocket(t, { dataDir });
+
+  const lightManifestRes = await fetch(`${base}/manifest.webmanifest`);
+  assert.equal(lightManifestRes.status, 200);
+  assert.match(lightManifestRes.headers.get("content-type"), /application\/manifest\+json/);
+  const lightManifest = await lightManifestRes.json();
+  assert.equal(lightManifest.display, "standalone");
+  assert.equal(lightManifest.theme_color, "#ffffff");
+  assert.equal(lightManifest.background_color, "#ffffff");
+
+  const lightHtml = await (await fetch(`${base}/`)).text();
+  assert.match(lightHtml, /viewport-fit=cover/);
+  assert.match(lightHtml, /<link rel="manifest" href="\/manifest\.webmanifest" \/>/);
+  assert.match(lightHtml, /<html lang="en" data-theme="light">/);
+  assert.match(lightHtml, /id="theme-color-meta" content="#ffffff"/);
+
+  const prefRes = await fetch(`${base}/api/preferences`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ theme: "dark" }),
+  });
+  assert.equal(prefRes.status, 200);
+
+  const darkManifest = await (await fetch(`${base}/manifest.webmanifest`)).json();
+  assert.equal(darkManifest.theme_color, "#111827");
+  assert.equal(darkManifest.background_color, "#0b1120");
+
+  const darkHtml = await (await fetch(`${base}/`)).text();
+  assert.match(darkHtml, /<html lang="en" data-theme="dark">/);
+  assert.match(darkHtml, /id="theme-color-meta" content="#111827"/);
+});

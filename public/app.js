@@ -627,9 +627,30 @@ async function apiJson(path, options = {}) {
 
 // ==================== Theme, Chrome & Status ====================
 
+const THEME_SURFACE_COLORS = {
+  light: "#ffffff",
+  dark: "#111827",
+};
+
 function applyTheme(theme) {
   const dark = theme === "dark";
-  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  const resolved = dark ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", resolved);
+  document.documentElement.style.colorScheme = resolved;
+  const themeMeta =
+    document.getElementById("theme-color-meta") ||
+    document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) {
+    themeMeta.setAttribute("content", THEME_SURFACE_COLORS[resolved]);
+  }
+  const storage = getClientStorage();
+  if (storage) {
+    try {
+      storage.setItem("coinkiwi_theme", resolved);
+    } catch {
+      // Storage unavailable.
+    }
+  }
   const sun = document.getElementById("theme-icon-sun");
   const moon = document.getElementById("theme-icon-moon");
   if (sun && moon) {
@@ -703,7 +724,7 @@ function renderTopBar() {
         typeof q?.refreshesRemainingToday === "number"
           ? `LCW Live · ${q.refreshesRemainingToday.toLocaleString()} refreshes left`
           : "LCW Live";
-      if (mLabel) mLabel.textContent = "Live";
+      if (mLabel) mLabel.textContent = "LCW";
     } else {
       label.textContent = "Add API Key";
       if (mLabel) mLabel.textContent = "API Key";

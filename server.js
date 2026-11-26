@@ -20,9 +20,79 @@ const MIME_TYPES = {
   ".js": "text/javascript; charset=utf-8",
   ".svg": "image/svg+xml",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".png": "image/png",
   ".ico": "image/x-icon",
 };
+
+const THEME_CHROME_COLORS = {
+  light: { surface: "#ffffff", bg: "#ffffff" },
+  dark: { surface: "#111827", bg: "#0b1120" },
+};
+
+async function getThemeChrome(store) {
+  try {
+    const prefs = await store.getPreferences();
+    const theme = prefs?.theme === "dark" ? "dark" : "light";
+    return { theme, ...THEME_CHROME_COLORS[theme] };
+  } catch {
+    return { theme: "light", ...THEME_CHROME_COLORS.light };
+  }
+}
+
+async function serveSpaHtml(res, store) {
+  const fullPath = resolve(PUBLIC_DIR, "index.html");
+  let html = await readFile(fullPath, "utf8");
+  const chrome = await getThemeChrome(store);
+  if (chrome.theme === "dark") {
+    html = html
+      .replace('<html lang="en" data-theme="light">', '<html lang="en" data-theme="dark">')
+      .replace(
+        '<meta name="theme-color" id="theme-color-meta" content="#ffffff" />',
+        `<meta name="theme-color" id="theme-color-meta" content="${chrome.surface}" />`,
+      );
+  }
+  res.writeHead(200, {
+    "content-type": "text/html; charset=utf-8",
+    "cache-control": "no-cache",
+    "x-content-type-options": "nosniff",
+  });
+  res.end(html);
+}
+
+async function serveManifest(res, store) {
+  const chrome = await getThemeChrome(store);
+  const manifest = {
+    name: "CoinKiwi",
+    short_name: "CoinKiwi",
+    description: "Self-hosted cryptocurrency price tracker powered by Live Coin Watch",
+    start_url: "/",
+    scope: "/",
+    display: "standalone",
+    background_color: chrome.bg,
+    theme_color: chrome.surface,
+    icons: [
+      {
+        src: "/apple-touch-icon.png?v=6",
+        sizes: "180x180",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/favicon.svg?v=6",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "any",
+      },
+    ],
+  };
+  res.writeHead(200, {
+    "content-type": "application/manifest+json; charset=utf-8",
+    "cache-control": "no-cache",
+    "x-content-type-options": "nosniff",
+  });
+  res.end(`${JSON.stringify(manifest, null, 2)}\n`);
+}
 
 function sendJson(res, status, payload) {
   const body = `${JSON.stringify(payload)}\n`;
@@ -311,6 +381,11 @@ export function createPocket(options = {}) {
         ["/apple-touch-icon.png", "apple-touch-icon.png"],
       ]);
 
+      if (pathname === "/manifest.webmanifest") {
+        await serveManifest(res, store);
+        return;
+      }
+
       if (staticFiles.has(pathname)) {
         await servePublicFile(res, staticFiles.get(pathname));
         return;
@@ -324,7 +399,7 @@ export function createPocket(options = {}) {
         pathname === "/categories" ||
         /^\/coins\/[^/]+$/.test(pathname)
       ) {
-        await servePublicFile(res, "index.html");
+        await serveSpaHtml(res, store);
         return;
       }
 

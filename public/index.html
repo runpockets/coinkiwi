@@ -1,17 +1,50 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" id="theme-color-meta" content="#ffffff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="CoinKiwi" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Cryptocurrency Prices, Charts, and Crypto Market Cap | CoinKiwi</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/favicon.ico?v=6" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=6" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png?v=6" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=6" />
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem("coinkiwi_theme");
+          if (theme !== "dark" && theme !== "light") {
+            var raw = localStorage.getItem("coinkiwi_snapshot_v2");
+            if (raw) {
+              var snap = JSON.parse(raw);
+              if (
+                snap &&
+                snap.preferences &&
+                (snap.preferences.theme === "dark" || snap.preferences.theme === "light")
+              ) {
+                theme = snap.preferences.theme;
+              }
+            }
+          }
+          if (theme === "dark" || theme === "light") {
+            document.documentElement.setAttribute("data-theme", theme);
+            document.documentElement.style.colorScheme = theme;
+            var meta = document.getElementById("theme-color-meta");
+            if (meta) meta.setAttribute("content", theme === "dark" ? "#111827" : "#ffffff");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <div class="ck-status-bar-fill" aria-hidden="true"></div>
     <div id="app" class="ck-app">
       <!-- Header Stack (reorders Navbar above Global Stats on mobile) -->
       <div class="ck-header-stack">
@@ -153,7 +186,7 @@
                   title="API Key &amp; Data Controls"
                 >
                   <span class="ck-status-dot" id="mobile-api-dot"></span>
-                  <span id="mobile-api-label">Live</span>
+                  <span id="mobile-api-label">LCW</span>
                 </button>
               </div>
             </div>
@@ -193,7 +226,7 @@
       <footer class="ck-footer">
         <div class="ck-container ck-footer-inner">
           <div class="ck-footer-brand">
-            <img src="/favicon.svg?v=5" alt="" width="28" height="28" />
+            <img src="/favicon.svg?v=6" alt="" width="28" height="28" />
             <strong>coinkiwi</strong>
             <span class="ck-muted">Self-hosted crypto tracker · Powered by Live Coin Watch</span>
           </div>
